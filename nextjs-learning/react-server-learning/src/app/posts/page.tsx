@@ -1,22 +1,16 @@
-import Link from 'next/link';
-import { posts } from '@/data/posts';
+import { Suspense } from 'react';
+import { Loading } from '@/components/Loading';
+import { PostList } from '@/components/PostList';
+import { NewPost } from '@/components/NewPost';
 
 export default async function Posts({
   searchParams,
 }: {
-  searchParams: Promise<{
+  searchParams: {
     [key: string]: string | string[] | undefined;
-  }>;
+  };
 }) {
-  const criteria = (await searchParams).criteria;
-  const resolvedPosts =
-    typeof criteria === 'string'
-      ? posts.filter((post) =>
-          post.title
-            .toLowerCase()
-            .includes(criteria.toLowerCase()),
-        )
-      : posts;
+  const criteria = searchParams.criteria;
   const resolvedHeading =
     typeof criteria === 'string'
       ? `Posts for ${criteria}`
@@ -25,16 +19,10 @@ export default async function Posts({
   return (
     <main>
       <h2>{resolvedHeading}</h2>
-      <ul>
-        {resolvedPosts.map((post) => (
-          <li key={post.id}>
-            <Link href={`/posts/${post.id}`}>
-              {post.title}
-            </Link>
-            <p>{post.description}</p>
-          </li>
-        ))}
-      </ul>
+      <NewPost/>
+        <Suspense fallback={<Loading />}>
+            <PostList criteria={criteria} />
+        </Suspense>
     </main>
   );
 }

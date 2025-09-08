@@ -1,24 +1,22 @@
-import { posts } from '@/data/posts';
-import { notFound } from 'next/navigation';
+import { Suspense } from 'react';
+import { Loading } from '@/components/Loading';
+import { PostDetail } from '@/components/PostDetail';
+import { ErrorBoundary } from 'react-error-boundary';
 
 export default async function Post({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: { id: string };
 }) {
-  const id = Number((await params).id);
-  if (!Number.isInteger(id)) {
-    notFound();
-  }
-  const post = posts.find((post) => post.id === Number(id));
-  if (!post) {
-    notFound();
-  }
+  const id = Number(params.id);
 
   return (
     <main>
-      <h2>{post.title}</h2>
-      <p>{post.description}</p>
+      <Suspense fallback={<Loading />}>
+        <ErrorBoundary fallback={<Loading />}>
+          <PostDetail id={id} />
+        </ErrorBoundary>
+      </Suspense>
     </main>
   );
 }
