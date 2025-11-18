@@ -1,7 +1,10 @@
 ﻿'use client';
 
+import React, { useRef, useActionState, startTransition } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { contactSchema } from '@/data/schema';
 import { insertContact } from '@/data/insertContact';
-import { useActionState } from 'react';
 
 
 export function ContactForm() {
@@ -19,19 +22,51 @@ export function ContactForm() {
     },
     formData: new FormData(),
   });
+  const {
+    handleSubmit,
+    register,
+    formState: { errors: clientErrors },
+  } = useForm({
+    resolver: zodResolver(contactSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      reason: '',
+      notes: '',
+      ...(Object.fromEntries(formData) ?? {}),
+    },
+  });
+  
+  const formRef = useRef<HTMLFormElement>(null);
+  
+  const onSubmit = () => {
+    startTransition(() => {
+      if (!formRef.current) {
+        return;
+      }
+      formAction(new FormData(formRef.current));
+    });
+  };
+  
   return (
-    <form action={formAction}>
+    <form ref={formRef} action={formAction} onSubmit={handleSubmit(onSubmit)} noValidate>
       <div className="field">
         <label htmlFor="name">Your name</label>
         <input
           type="text"
           id="name"
-          name="name"
           defaultValue={(formData.get('name') ?? '') as string}
-          aria-invalid={errors.name ? 'true' : 'false'}
+          aria-invalid={
+            (clientErrors.name ?? errors.name)
+              ? 'true'
+              : 'false'
+          }
           aria-describedby="name-error"
+          aria-required="true"
+          {...register('name')}
         />
         <FieldError
+          clientError={clientErrors.name}
           serverError={errors.name}
           errorId="name-error"
         />
@@ -41,12 +76,18 @@ export function ContactForm() {
         <input
           type="email"
           id="email"
-          name="email"
           defaultValue={(formData.get('email') ?? '') as string}
-          aria-invalid={errors.email ? 'true' : 'false'}
+          aria-invalid={
+            (clientErrors.email ?? errors.email)
+              ? 'true'
+              : 'false'
+          }
           aria-describedby="email-error"
+          aria-required="true"
+          {...register('email')}
         />
         <FieldError
+          clientError={clientErrors.email}
           serverError={errors.email}
           errorId="email-error"
         />
@@ -55,10 +96,15 @@ export function ContactForm() {
         <label htmlFor="reason">Reason you need to contact us</label>
         <select
           id="reason"
-          name="reason"
           defaultValue={(formData.get('reason') ?? '') as string}
-          aria-invalid={errors.reason ? 'true' : 'false'}
+          aria-invalid={
+            (clientErrors.reason ?? errors.reason)
+              ? 'true'
+              : 'false'
+          }
           aria-describedby="reason-error"
+          aria-required="true"
+          {...register('reason')}
         >
            <option value=""></option>
            <option value="Support">Support</option>
@@ -66,6 +112,7 @@ export function ContactForm() {
            <option value="Other">Other</option>
          </select>
         <FieldError
+          clientError={clientErrors.reason}
           serverError={errors.reason}
           errorId="reason-error"
         />
@@ -74,8 +121,8 @@ export function ContactForm() {
          <label htmlFor="notes">Additional notes</label>
          <textarea
           id="notes"
-          name="notes"
           defaultValue={(formData.get('notes') ?? '') as string}
+          {...register('notes')}
         ></textarea>
        </div>
        {!ok && <p role="alert" className="error">{error}</p>}
@@ -84,17 +131,19 @@ export function ContactForm() {
    );
  }
 
-type Err = { message?: string } | null;
-function FieldError({ serverError, errorId }: {
-  serverError: Err;
+type Err = { message?: string } | null | undefined;
+function FieldError({ clientError, serverError, errorId }: {
+  clientError?: Err;
+  serverError?: Err;
   errorId: string;
 }) {
-  if (!serverError) {
+  const error = clientError ?? serverError;
+  if (!error) {
     return null;
   }
   return (
     <div id={errorId} role="alert">
-      {serverError.message}
+      {error.message}
     </div>
   );
 }
